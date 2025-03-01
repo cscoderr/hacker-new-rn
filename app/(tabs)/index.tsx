@@ -1,174 +1,238 @@
 import {
+  ActivityIndicator,
   FlatList,
-  Pressable,
+  RefreshControl,
   StyleSheet,
   TouchableOpacity,
+  useColorScheme,
 } from "react-native";
 
-import EditScreenInfo from "@/components/EditScreenInfo";
 import { Text, View } from "@/components/Themed";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  FadeIn,
-  FadeOut,
-  interpolateColor,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import React, { useState } from "react";
+import React, { useEffect } from "react";
+import AnimatedTabView from "@/components/AnimatedTabView";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { News } from "@/types/new";
+import moment from "moment";
+import * as AppleColors from "@bacons/apple-colors";
+import Colors from "@/constants/Colors";
+import { Link } from "expo-router";
 
-const DATA = Array.from({ length: 20 }, (_, index) => index + 1);
+const fetchNews = async (): Promise<News[]> => {
+  try {
+    const response = await fetch(
+      "https://hacker-news.firebaseio.com/v0/topstories.json"
+    );
+    if (!response.ok) {
+      console.log("errpor");
+      throw new Error("unable to get news");
+    }
+    const newsId = (await response.json()) as number[];
+    const ids = newsId.splice(0, 10);
+    let newsResponse: News[] = [];
+
+    for (const index in ids) {
+      const id = ids[index];
+      const news = await fetchNewsWithID(id);
+      newsResponse.push(news);
+    }
+    return newsResponse;
+  } catch (e) {
+    console.log(e);
+    throw new Error("unable to get news");
+  }
+};
+
+const fetchNewsWithID = async (id: number): Promise<News> => {
+  try {
+    const response = await fetch(
+      `https://hacker-news.firebaseio.com/v0/item/${id}.json?print=pretty`
+    );
+    if (!response.ok) {
+      console.log("errpor");
+      throw new Error("unable to get news");
+    }
+    return (await response.json()) as News;
+  } catch (e) {
+    console.log(e);
+    throw new Error("unable to get news");
+  }
+};
 
 export default function TabOneScreen() {
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTab, setSelectedTab] = React.useState(0);
+  const { top } = useSafeAreaInsets();
+  const [news, setNews] = React.useState<News[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(true);
+  const theme = useColorScheme();
+
+  const fetchNewsData = React.useCallback(async () => {
+    try {
+      const data = await fetchNews();
+      setNews(data);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  const handleRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    fetchNewsData();
+  }, [fetchNewsData]);
+
+  React.useEffect(() => {
+    setLoading(true);
+    fetchNewsData();
+  }, [fetchNewsData]);
   return (
     <View style={styles.container}>
-      <AppTabView
+      <AnimatedTabView
         selectedIndex={selectedTab}
-        tabs={["Top", "New", "Best"]}
+        tabs={["Top", "New", "Best", "Ask", "Show"]}
         onTabSelected={(index) => setSelectedTab(index)}
       />
-      <FlatList
-        data={DATA}
-        renderItem={({ item }) => <Item item={item} />}
-        ItemSeparatorComponent={() => <View style={{ height: 20 }} />}
-        contentContainerStyle={{ marginHorizontal: 15 }}
-      />
+      {/* <View style={{ flex: 1, paddingTop: top + 60 }}> */}
+      {loading && (
+        <ActivityIndicator style={[styles.loader, { marginTop: top }]} />
+      )}
+
+      {!loading && (
+        <FlatList
+          contentInsetAdjustmentBehavior="automatic"
+          data={news}
+          renderItem={({ item }) => <Item item={item} />}
+          keyExtractor={(item) => item.id.toString()}
+          ItemSeparatorComponent={() => <ItemSeparator />}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            marginHorizontal: 15,
+            paddingTop: top + 16,
+            gap: 10,
+          }}
+          style={{ paddingVertical: 10, flex: 1 }}
+          refreshControl={
+            <RefreshControl onRefresh={handleRefresh} refreshing={refreshing} />
+          }
+        />
+      )}
     </View>
+    // </View>
   );
 }
 
-const Item = ({ item }: { item: number }) => {
+const ItemSeparator = () => (
+  <View>
+    <View style={{ height: 10 }} />
+    <View style={styles.separator} />
+  </View>
+);
+
+const Item = ({ item }: { item: News }) => {
+  const colorScheme = useColorScheme();
+
   return (
-    <TouchableOpacity activeOpacity={0.5}>
-      <View
-        style={{
-          height: 100,
-          backgroundColor: "grey",
-          borderTopEndRadius: 10,
-          borderTopStartRadius: 10,
-        }}
-      />
-      <View
-        style={{
-          borderBottomEndRadius: 10,
-          borderBottomStartRadius: 10,
-        }}
-      >
+    <Link href={`/${item.id}`} asChild>
+      <TouchableOpacity activeOpacity={0.5}>
         <View
           style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text>Hello here</Text>
-          <Text>Hello here</Text>
-        </View>
-        <Text style={styles.title}>Hello here {item}</Text>
-        <Text style={{ fontSize: 14 }}>@cscoder</Text>
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 10,
+            borderBottomEndRadius: 10,
+            borderBottomStartRadius: 10,
           }}
         >
           <View
             style={{
               flexDirection: "row",
-              alignItems: "center",
-              gap: 3,
+              justifyContent: "space-between",
+              marginBottom: 10,
             }}
           >
-            <Ionicons name="arrow-up" />
-            <Text>10</Text>
+            <Text style={{ fontSize: 14 }}>@{item.by}</Text>
+            <Ionicons
+              name="bookmark"
+              color={Colors[colorScheme ?? "light"].tint}
+              size={16}
+            />
           </View>
+          <Text style={styles.title}>{item.title}</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+            }}
+          >
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                <Ionicons name="arrow-up" color={"green"} />
+                <Text>{item.score}</Text>
+              </View>
 
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 3,
-            }}
-          >
-            <Ionicons name="chatbox-outline" />
-            <Text>20</Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 3,
-            }}
-          >
-            <Ionicons name="time-outline" />
-            <Text>1 hour ago</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                <Ionicons
+                  name="chatbox-outline"
+                  color={Colors[colorScheme ?? "light"].text}
+                />
+                <Text>{item.descendants}</Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              <Ionicons
+                name="time-outline"
+                color={Colors[colorScheme ?? "light"].text}
+              />
+              <Text>{moment.unix(item.time).parseZone().fromNow()}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-const AppTabView = ({
-  selectedIndex = 0,
-  tabs,
-  onTabSelected,
-}: {
-  selectedIndex: number;
-  tabs: string[];
-  onTabSelected: (index: number) => void;
-}) => {
-  return (
-    <View style={{ flex: 1, flexDirection: "row", gap: 15, marginBottom: 40 }}>
-      {tabs.map((value, index) => {
-        const selected = selectedIndex == index;
-        return (
-          <Pressable
-            onPress={() => {
-              console.log(index);
-              onTabSelected(index);
-            }}
-            key={index}
-            // animate={{
-            //   backgroundColor: selected ? "tomato" : "grey",
-            //   scale: selected ? 1 : 0.9,
-            // }}
-            style={{
-              height: 40,
-              flexDirection: "row",
-              justifyContent: "center",
-              alignItems: "center",
-              borderRadius: 10,
-              paddingHorizontal: 15,
-              paddingVertical: 5,
-              backgroundColor: selected ? "tomato" : "grey",
-            }}
-          >
-            <Text style={{ fontSize: 16, color: "#000" }}>{value}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
+      </TouchableOpacity>
+    </Link>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-
-    // alignItems: "center",
-    // justifyContent: "center",
+    alignItems: "stretch",
   },
   title: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
+    marginBottom: 10,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
   },
   separator: {
-    marginVertical: 30,
-    height: 1,
-    width: "100%",
+    marginHorizontal: -15,
+    marginStart: 60,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginTop: -StyleSheet.hairlineWidth,
+    borderBottomColor: AppleColors.separator,
   },
 });

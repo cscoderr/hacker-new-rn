@@ -30,7 +30,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Tab One",
+          headerShown: false,
+          title: "",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name={focused ? "home" : "home-outline"}
@@ -42,7 +43,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="bookmark"
         options={{
-          title: "Tab Two",
+          title: "",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name={focused ? "bookmark" : "bookmark-outline"}
@@ -54,7 +55,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: "Tab Three",
+          title: "",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name={focused ? "search" : "search-outline"}
@@ -66,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Tab Four",
+          title: "",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name={focused ? "settings" : "settings-outline"}
