@@ -20,10 +20,19 @@ import * as AppleColors from "@bacons/apple-colors";
 import Colors from "@/constants/Colors";
 import { Link } from "expo-router";
 
-const fetchNews = async (): Promise<News[]> => {
+enum StoriesType {
+  topstories = 0,
+  newstories,
+  beststories,
+  askstories,
+  showstories,
+}
+
+const fetchStories = async (type: StoriesType): Promise<News[]> => {
   try {
+    console.log(StoriesType[type]);
     const response = await fetch(
-      "https://hacker-news.firebaseio.com/v0/topstories.json"
+      `https://hacker-news.firebaseio.com/v0/${StoriesType[type]}.json`
     );
     if (!response.ok) {
       console.log("errpor");
@@ -62,16 +71,16 @@ const fetchNewsWithID = async (id: number): Promise<News> => {
 };
 
 export default function TabOneScreen() {
-  const [selectedTab, setSelectedTab] = React.useState(0);
-  const { top } = useSafeAreaInsets();
+  const [selectedTab, setSelectedTab] = React.useState(StoriesType.topstories);
+  const { top, bottom } = useSafeAreaInsets();
   const [news, setNews] = React.useState<News[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(true);
   const theme = useColorScheme();
 
-  const fetchNewsData = React.useCallback(async () => {
+  const fetchTopStoriesData = React.useCallback(async () => {
     try {
-      const data = await fetchNews();
+      const data = await fetchStories(selectedTab);
       setNews(data);
     } catch (err) {
       console.log(err);
@@ -79,17 +88,17 @@ export default function TabOneScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedTab]);
 
   const handleRefresh = React.useCallback(() => {
     setRefreshing(true);
-    fetchNewsData();
-  }, [fetchNewsData]);
+    fetchTopStoriesData();
+  }, [fetchTopStoriesData]);
 
   React.useEffect(() => {
     setLoading(true);
-    fetchNewsData();
-  }, [fetchNewsData]);
+    fetchTopStoriesData();
+  }, [fetchTopStoriesData]);
   return (
     <View style={styles.container}>
       <AnimatedTabView
@@ -113,6 +122,7 @@ export default function TabOneScreen() {
           contentContainerStyle={{
             marginHorizontal: 15,
             paddingTop: top + (Platform.OS === "ios" ? 0 : 32),
+            paddingBottom: Platform.OS === "android" ? bottom + 36 : 0,
             gap: 10,
           }}
           style={{ paddingVertical: 10, flex: 1 }}
