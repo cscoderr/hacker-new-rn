@@ -1,6 +1,7 @@
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   TouchableOpacity,
@@ -111,7 +112,7 @@ export default function TabOneScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             marginHorizontal: 15,
-            paddingTop: top + 16,
+            paddingTop: top + (Platform.OS === "ios" ? 0 : 32),
             gap: 10,
           }}
           style={{ paddingVertical: 10, flex: 1 }}
@@ -134,7 +135,6 @@ const ItemSeparator = () => (
 
 const Item = ({ item }: { item: News }) => {
   const colorScheme = useColorScheme();
-
   return (
     <Link href={`/${item.id}`} asChild>
       <TouchableOpacity activeOpacity={0.5}>
@@ -151,9 +151,9 @@ const Item = ({ item }: { item: News }) => {
               marginBottom: 10,
             }}
           >
-            <Text style={{ fontSize: 14 }}>@{item.by}</Text>
+            <Text style={{ fontSize: 14, color: "tomato" }}>@{item.by}</Text>
             <Ionicons
-              name="bookmark"
+              name="bookmark-outline"
               color={Colors[colorScheme ?? "light"].tint}
               size={16}
             />
@@ -229,8 +229,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   separator: {
-    marginHorizontal: -15,
-    marginStart: 60,
+    marginHorizontal: -5,
     borderBottomWidth: StyleSheet.hairlineWidth,
     marginTop: -StyleSheet.hairlineWidth,
     borderBottomColor: AppleColors.separator,

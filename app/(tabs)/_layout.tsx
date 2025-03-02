@@ -34,7 +34,7 @@ export default function TabLayout() {
           title: "",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "home" : "home-outline"}
+              name={focused ? "newspaper" : "newspaper-outline"}
               color={color}
             />
           ),

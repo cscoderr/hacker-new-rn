@@ -17,13 +17,12 @@ import {
 } from "react-native-safe-area-context";
 import Colors from "@/constants/Colors";
 import { News } from "@/types/new";
-import RenderHTML from "react-native-render-html";
-import { ScrollView } from "moti";
+import WebView from "react-native-webview";
 
 const fetchNewsWithID = async (id: number): Promise<News> => {
   try {
     const response = await fetch(
-      `https://hacker-news.firebaseio.com/v0/item/43148408.json?print=pretty`
+      `https://hacker-news.firebaseio.com/v0/item/${id}.json?print=pretty`
     );
     if (!response.ok) {
       console.log("errpor");
@@ -36,26 +35,44 @@ const fetchNewsWithID = async (id: number): Promise<News> => {
   }
 };
 
+const fetchComments = async (commendIds: number[]): Promise<News[]> => {
+  try {
+    let comments: News[] = [];
+    for (const commentId of commendIds) {
+      console.log(commentId);
+      comments.push(await fetchNewsWithID(commentId));
+    }
+    return comments;
+  } catch (e) {
+    console.log(e);
+    throw new Error("unable to get comments");
+  }
+};
+
 const DetailsScreen = () => {
   const { top } = useSafeAreaInsets();
   const theme = useColorScheme();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = React.useState(true);
+  const [commentLoading, setCommentLoading] = React.useState(true);
   const [news, setNews] = React.useState<News>();
   const [comments, setComments] = React.useState<News[] | undefined>([]);
   const { width } = useWindowDimensions();
   const handleNewsDetails = React.useCallback(async () => {
     setLoading(true);
     const response = await fetchNewsWithID(Number(id));
-    console.log(response);
-
     setNews(response);
-    const comments = response.kids?.map(
-      async (kid) => await fetchNewsWithID(kid)
-    );
-
     setLoading(false);
+    handleCommentsData(response.kids ?? []);
+  }, []);
+
+  const handleCommentsData = React.useCallback(async (comments: number[]) => {
+    if (news === undefined) return;
+    setCommentLoading(true);
+    const response = await fetchComments(comments);
+    setComments(response);
+    setCommentLoading(false);
   }, []);
 
   useEffect(() => {
@@ -75,16 +92,21 @@ const DetailsScreen = () => {
         </BlurView>
       </Pressable>
       <Text style={{ color: "white" }}>DetailsScreen</Text>
-      {loading && <ActivityIndicator style={styles.loader} />}
+      {loading && <ActivityIndicator size={"large"} style={styles.loader} />}
+
       {!loading && (
-        <ScrollView>
-          <Text>{news?.title}</Text>
-          {/* <RenderHTML
-            contentWidth={width}
-            source={{ html: news!.text!.toString() }}
-            enableExperimentalMarginCollapsing={true}
-          /> */}
-        </ScrollView>
+        <WebView source={{ uri: news?.url ?? "" }} />
+        // <ScrollView style={styles.container}>
+        //   <Text>{news?.title}</Text>
+
+        //   {/* {comments?.map((comment, index) => {
+        //     return (
+        //       <Text key={index} style={{ marginBottom: 20 }} numberOfLines={5}>
+        //         {comment.text}
+        //       </Text>
+        //     );
+        //   })} */}
+        // </ScrollView>
       )}
     </SafeAreaView>
   );
