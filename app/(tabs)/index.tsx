@@ -19,6 +19,9 @@ import * as AppleColors from "@bacons/apple-colors";
 import Colors from "@/constants/Colors";
 import { Link } from "expo-router";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import ShimmerPlaceholder from "react-native-shimmer-placeholder";
+import { LinearGradient } from "expo-linear-gradient";
+import ItemShimmer from "@/components/ItemShimmer";
 
 enum StoriesType {
   topstories = 0,
@@ -90,8 +93,14 @@ export default function TabOneScreen() {
   const [selectedTab, setSelectedTab] = React.useState(StoriesType.topstories);
   const { top, bottom } = useSafeAreaInsets();
   const idsRef = React.useRef<number[]>([]);
-  const [refreshing, setRefreshing] = React.useState(true);
-  const { data, status, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const {
+    data,
+    status,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteQuery({
     queryKey: [selectedTab],
     queryFn: async ({ pageParam }) => {
       if (pageParam == 0) {
@@ -124,10 +133,6 @@ export default function TabOneScreen() {
     [fetchNextPage]
   );
 
-  const handleRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    // fetchTopStoriesData();
-  }, []);
   return (
     <View style={styles.container}>
       <AnimatedTabView
@@ -136,7 +141,13 @@ export default function TabOneScreen() {
         onTabSelected={(index) => setSelectedTab(index)}
       />
       {status === "pending" && (
-        <ActivityIndicator style={[styles.loader, { marginTop: top }]} />
+        <>
+          <ItemShimmer />
+          <ItemSeparator />
+          <ItemShimmer />
+          <ItemSeparator />
+          <ItemShimmer />
+        </>
       )}
       {status === "error" && <Text>An error occur</Text>}
 
@@ -160,7 +171,7 @@ export default function TabOneScreen() {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={() =>
-            isFetchingNextPage ? <ActivityIndicator /> : null
+            isFetchingNextPage ? <ItemShimmer /> : null
           }
           getItemLayout={(data, index) => ({
             length: 100,
@@ -169,7 +180,7 @@ export default function TabOneScreen() {
           })}
           style={{ paddingVertical: 10, flex: 1 }}
           refreshControl={
-            <RefreshControl onRefresh={handleRefresh} refreshing={refreshing} />
+            <RefreshControl onRefresh={refetch} refreshing={isRefetching} />
           }
         />
       )}
