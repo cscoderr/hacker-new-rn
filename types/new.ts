@@ -1,17 +1,25 @@
 export type News = {
-  by: string;
-  descendants: number;
   id: number;
-  kids?: number[];
-  score: number;
+  deleted?: boolean;
+  type: NewsType;
+  by: string;
   time: number;
   text?: string;
-  title: string;
-  type: Type;
+  dead?: boolean;
+  parent?: number;
+  poll?: number;
+  kids?: number[];
   url?: string;
+  score: number;
+  title: string;
+  parts?: number[];
+  descendants: number;
 };
 
-enum Type {
+export enum NewsType {
   story,
   comment,
+  job,
+  poll,
+  pollopt,
 }
